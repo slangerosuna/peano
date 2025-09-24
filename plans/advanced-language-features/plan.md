@@ -36,7 +36,7 @@ check_function :: (fn: FunctionAst) -> none => {
 	mir := lower_to_mir(fn)
 	regions := solve_regions(mir)
 	borrow_graph := BorrowGraph::with_capacity(mir.local_count)
-	queue := Deque[(BlockId, StmtId)]::from(mir.statements())
+	queue := Deque<(BlockId, StmtId)>::from(mir.statements())
 	while let some((block, stmt)) = queue.pop_front() {
 		constraint := derive_borrow_constraint(mir[block][stmt], regions)
 		match borrow_graph.apply(constraint) {
@@ -48,7 +48,7 @@ check_function :: (fn: FunctionAst) -> none => {
 }
 
 solve_regions :: (mir: Mir) -> RegionSolution => {
-	worklist := Deque[Constraint]()
+	worklist := Deque<Constraint>()
 	pending := BitSet::new()
 	solution := RegionSolution::default()
 	for constraint in initialize_constraints(mir) {
@@ -127,7 +127,7 @@ const_eval :: (expr: Expr, env: ConstEnv) -> Value => {
 
 ### Lazy Thunk Forcing
 ```pn
-force :: (thunk: &Thunk[T]) -> T => {
+force :: (thunk: &Thunk<T>) -> T => {
 	match thunk.state.load() {
 		ThunkState::Evaluated(value) => ret value.clone(),
 		ThunkState::Pending => {

@@ -40,13 +40,13 @@
 
 ### `Vec<T>` Push/Pop
 ```pn
-vec_push :: (vec: &mut Vec[T], item: T) -> none => {
+vec_push :: (vec: &mut Vec<T>, item: T) -> none => {
 	reserve_additional(vec, 1)
 	vec.data[vec.len] = move(item)
 	vec.len += 1
 }
 
-vec_pop :: (vec: &mut Vec[T]) -> ?T => {
+vec_pop :: (vec: &mut Vec<T>) -> ?T => {
 	if vec.len == 0 {
 		ret none
 	}
@@ -54,7 +54,7 @@ vec_pop :: (vec: &mut Vec[T]) -> ?T => {
 	ret some(move(vec.data[vec.len]))
 }
 
-reserve_additional :: (vec: &mut Vec[T], additional: usize) -> none => {
+reserve_additional :: (vec: &mut Vec<T>, additional: usize) -> none => {
 	required := vec.len + additional
 	if required <= vec.capacity {
 		ret none
@@ -72,7 +72,7 @@ reserve_additional :: (vec: &mut Vec[T], additional: usize) -> none => {
 
 ### Iterator Integration
 ```pn
-impl Iterator[T] for VecIter[T] {
+impl Iterator<T> for VecIter<T> {
 	next :: (&mut self) -> ?T => {
 		if self.index == self.slice.len {
 			ret none
@@ -88,7 +88,7 @@ impl Iterator[T] for VecIter[T] {
 
 ### Hash Map Insert (open addressing)
 ```pn
-map_insert :: (map: &mut HashMap[K, V], key: K, value: V) -> none => {
+map_insert :: (map: &mut HashMap<K, V>, key: K, value: V) -> none => {
 	if load_factor(map) > 0.75 {
 		resize(map)
 	}

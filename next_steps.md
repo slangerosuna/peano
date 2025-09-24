@@ -25,7 +25,7 @@ codegen_char_literal :: (ctx: &mut CodegenCtx, value: u32) -> LlvmValue => {
 }
 ```
    - **[1.2]** Implement remaining integer widths and unsigned semantics across parser, semantic analysis, and backend.
-     - **Plan:** Add tokenization for suffixes, expand type table with metadata, adjust numeric literal inference, ensure unsigned wrap semantics in IR, and add regression tests for overflow behavior.
+     - **Plan:** Add tokenization for suffixes, expand type table with metadata, adjust numeric literal inference, ensure unsigned wrap semantics in IR, and add regression tests for overflow behavior. [x]
      - **Pseudocode:**
 ```pn
 lower_int_literal :: (lit: ParsedInt, target: IntType) -> !TypedLiteral => {
@@ -51,7 +51,7 @@ emit_int_arith :: (op: IntOp, lhs: LlvmValue, rhs: LlvmValue, ty: IntType) -> Ll
 }
 ```
    - **[1.3]** Generalize arrays/tuples (including tuple pattern binding and tuple constructor lowering).
-     - **Plan:** Introduce tuple type descriptors, update pattern binder to handle destructuring, generate aggregate LLVM constants, and ensure borrow-safe indexes. Add parser grammar for tuple literals and patterns.
+     - **Plan:** Introduce tuple type descriptors, update pattern binder to handle destructuring, generate aggregate LLVM constants, and ensure borrow-safe indexes. Add parser grammar for tuple literals and patterns. [x]
      - **Pseudocode:**
 ```pn
 analyze_tuple_pattern :: (pat: TuplePattern, expected: TypeId) -> !TupleBinding => {
@@ -66,20 +66,20 @@ analyze_tuple_pattern :: (pat: TuplePattern, expected: TypeId) -> !TupleBinding 
 	ret TupleBinding { bindings }
 }
 
-lower_tuple_literal :: (ctx: &mut CodegenCtx, exprs: [ExprId]) -> LlvmValue => {
+lower_tuple_literal :: (ctx: &mut CodegenCtx, exprs: Vec<ExprId>) -> LlvmValue => {
 	values := exprs.map(|id| lower_expr(ctx, id))
 	ret ctx.builder.const_struct(values, /*packed=*/false)
 }
 ```
    - **[1.4]** Expand slice support from `slice_i64` to generic slices with borrow-aware iteration.
-     - **Plan:** Define generic slice struct `{ ptr: *T, len: usize }`, parameterize functions over element type, integrate borrow checker views, and implement iterator trait bridging.
+     - **Plan:** Define generic slice struct `{ ptr: *T, len: usize }`, parameterize functions over element type, integrate borrow checker views, and implement iterator trait bridging. [ ]
      - **Pseudocode:**
 ```pn
-slice_from_vec :: (vec: &Vec[T]) -> Slice[T] => {
+slice_from_vec :: (vec: &Vec<T>) -> Slice<T> => {
 	ret Slice { ptr: vec.data.as_ptr(), len: vec.len }
 }
 
-slice_iter_next :: (iter: &mut SliceIter[T]) -> ?T => {
+slice_iter_next :: (iter: &mut SliceIter<T>) -> ?T => {
 	if iter.index >= iter.slice.len {
 		ret none
 	}
@@ -89,7 +89,7 @@ slice_iter_next :: (iter: &mut SliceIter[T]) -> ?T => {
 }
 ```
    - **[1.5]** Introduce generic parameter parsing in AST and type resolver (structs, enums, functions).
-     - **Plan:** Extend grammar for `<T, U>` parameter lists, store generics in AST nodes, update resolver to maintain scope stack, and emit diagnostics for missing arguments.
+     - **Plan:** Extend grammar for `<T, U>` parameter lists, store generics in AST nodes, update resolver to maintain scope stack, and emit diagnostics for missing arguments. [ ]
      - **Pseudocode:**
 ```pn
 parse_generics :: (tokens: TokenStream) -> !GenericParams => {
@@ -110,10 +110,10 @@ parse_generics :: (tokens: TokenStream) -> !GenericParams => {
 }
 ```
    - **[1.6]** Implement monomorphization cache per `instantiate_generic` pseudocode, including signature hashing and duplication avoidance.
-     - **Plan:** Create cache keyed by normalized type signature, use deterministic hashing, and deduplicate IR modules. Add metrics logging when cache hits occur.
+     - **Plan:** Create cache keyed by normalized type signature, use deterministic hashing, and deduplicate IR modules. Add metrics logging when cache hits occur. [ ]
      - **Pseudocode:**
 ```pn
-instantiate_mono :: (def: GenericDefId, args: [TypeId]) -> !LlvmValue => {
+instantiate_mono :: (def: GenericDefId, args: Vec<TypeId>) -> !LlvmValue => {
 	signature := make_signature(def, args)
 	if let some(cached) = mono_cache.get(signature) {
 		ret cached
@@ -126,10 +126,10 @@ instantiate_mono :: (def: GenericDefId, args: [TypeId]) -> !LlvmValue => {
 }
 ```
    - **[1.7]** Enforce trait bounds during instantiation and surface diagnostics referencing `plans/standard-traits/plan.md`.
-     - **Plan:** During type substitution, evaluate where clauses, query trait implementation tables, collect missing bounds, and emit actionable diagnostics with suggestions.
+     - **Plan:** During type substitution, evaluate where clauses, query trait implementation tables, collect missing bounds, and emit actionable diagnostics with suggestions. [ ]
      - **Pseudocode:**
 ```pn
-check_trait_bounds :: (impl_scope: &ImplScope, args: [TypeId], bounds: [WhereClause]) -> !none => {
+check_trait_bounds :: (impl_scope: &ImplScope, args: Vec<TypeId>, bounds: Vec<WhereClause>) -> !none => {
 	for bound in bounds {
 		if ~impl_scope.satisfies(bound, args) {
 			d := Diagnostic::new("trait bound not satisfied", bound.span)
@@ -141,10 +141,10 @@ check_trait_bounds :: (impl_scope: &ImplScope, args: [TypeId], bounds: [WhereCla
 }
 ```
    - **[1.8]** Complete pattern matching upgrades (exhaustiveness, guards, ergonomic sugar) with tests mirroring plan requirements.
-     - **Plan:** Implement decision tree builder, integrate guard evaluation short-circuiting, add diagnostics for uncovered cases, and support or-pattern sugar.
+     - **Plan:** Implement decision tree builder, integrate guard evaluation short-circuiting, add diagnostics for uncovered cases, and support or-pattern sugar. [ ]
      - **Pseudocode:**
 ```pn
-check_match_exhaustiveness :: (arms: [MatchArm], scrut_ty: TypeId) -> !none => {
+check_match_exhaustiveness :: (arms: Vec<MatchArm>, scrut_ty: TypeId) -> !none => {
 	cov := CoverageMatrix::new(scrut_ty)
 	for arm in arms {
 		cov.mark(arm.pattern)
@@ -159,7 +159,7 @@ check_match_exhaustiveness :: (arms: [MatchArm], scrut_ty: TypeId) -> !none => {
 }
 ```
    - **[1.9]** Lower async functions to state machines and wire to executor hooks from `plans/concurrency-and-parallelism/plan.md`.
-     - **Plan:** Translate async AST to MIR with yield points, generate enums for states, plug into executor `register_waker`, and ensure borrow checking across await points.
+     - **Plan:** Translate async AST to MIR with yield points, generate enums for states, plug into executor `register_waker`, and ensure borrow checking across await points. [ ]
      - **Pseudocode:**
 ```pn
 lower_async_fn :: (fn_id: FnId) -> AsyncArtifact => {
@@ -171,7 +171,7 @@ lower_async_fn :: (fn_id: FnId) -> AsyncArtifact => {
 }
 ```
    - **[1.10]** Backfill regression tests in `tests/` for each newly supported construct.
-     - **Plan:** Create test templates per feature, integrate into CI, add golden outputs, and ensure coverage thresholds update.
+     - **Plan:** Create test templates per feature, integrate into CI, add golden outputs, and ensure coverage thresholds update. [ ]
      - **Pseudocode:**
 ```pn
 add_regression_test :: (name: string, source: string, expected: ExpectedResult) -> none => {
@@ -184,10 +184,10 @@ add_regression_test :: (name: string, source: string, expected: ExpectedResult) 
 
 2. **Complete trait system and polymorphism** (`plans/standard-traits/plan.md`, `plans/near-term-priorities/plan.md`)
    - **[2.1]** Finish implementations for `Eq`/`PartialEq` on user-defined structs/enums.
-     - **Plan:** Autogenerate equality based on field comparison, integrate derive macro stubs, and ensure structural equality semantics.
+     - **Plan:** Autogenerate equality based on field comparison, integrate derive macro stubs, and ensure structural equality semantics. [ ]
      - **Pseudocode:**
 ```pn
-derive_partial_eq :: (ty: TypeId, fields: [FieldId]) -> ImplBlock => {
+derive_partial_eq :: (ty: TypeId, fields: Vec<FieldId>) -> ImplBlock => {
 	body := []
 	for field in fields {
 		body.push(Expr::eq(FieldAccess::new("self", field), FieldAccess::new("other", field)))
@@ -196,7 +196,7 @@ derive_partial_eq :: (ty: TypeId, fields: [FieldId]) -> ImplBlock => {
 }
 ```
    - **[2.2]** Extend `Ord`/`PartialOrd` to tuple and enum variant ordering.
-     - **Plan:** Implement lexicographic comparison for tuples and discriminant-first ordering for enums, ensuring fallback to field comparisons.
+     - **Plan:** Implement lexicographic comparison for tuples and discriminant-first ordering for enums, ensuring fallback to field comparisons. [ ]
      - **Pseudocode:**
 ```pn
 compare_tuple :: (lhs: TupleValue, rhs: TupleValue) -> Ordering => {
@@ -210,7 +210,7 @@ compare_tuple :: (lhs: TupleValue, rhs: TupleValue) -> Ordering => {
 }
 ```
    - **[2.3]** Ship `Hash` trait and link to hash map plan items (`plans/core-utilities/plan.md`).
-     - **Plan:** Provide default implementations for primitives, allow custom stateful hashers, and integrate with `HashMap`.
+     - **Plan:** Provide default implementations for primitives, allow custom stateful hashers, and integrate with `HashMap`. [ ]
      - **Pseudocode:**
 ```pn
 hash_struct :: (value: &StructValue, state: &mut Hasher) -> none => {
@@ -220,7 +220,7 @@ hash_struct :: (value: &StructValue, state: &mut Hasher) -> none => {
 }
 ```
    - **[2.4]** Implement `Display` trait plumbing for `println` (moving away from compiler intrinsic).
-     - **Plan:** Create trait object path for formatting, update macro lowering, reuse scratch buffers, and ensure thread-safe stdout locking.
+     - **Plan:** Create trait object path for formatting, update macro lowering, reuse scratch buffers, and ensure thread-safe stdout locking. [ ]
      - **Pseudocode:**
 ```pn
 display_write :: (value: &dyn Display, writer: &mut Formatter) -> !none => {
@@ -229,10 +229,10 @@ display_write :: (value: &dyn Display, writer: &mut Formatter) -> !none => {
 }
 ```
    - **[2.5]** Add `Debug` formatting hooks referencing compiler diagnostics.
-     - **Plan:** Extend formatting engine with structured output, provide derived debug for enums/structs, and integrate with panic payloads.
+     - **Plan:** Extend formatting engine with structured output, provide derived debug for enums/structs, and integrate with panic payloads. [ ]
      - **Pseudocode:**
 ```pn
-debug_struct :: (name: string, fields: [DebugField], f: &mut Formatter) -> !none => {
+debug_struct :: (name: string, fields: Vec<DebugField>, f: &mut Formatter) -> !none => {
 	f.write_str(name)?
 	f.write_char('{')?
 	for (i, field) in fields.enumerate() {
@@ -246,7 +246,7 @@ debug_struct :: (name: string, fields: [DebugField], f: &mut Formatter) -> !none
 }
 ```
    - **[2.6]** Stabilize `Iterator`/`IntoIterator` traits and ensure for-loop desugaring uses them.
-     - **Plan:** Finalize trait definitions, add blanket impls for collections, and update lowering to use `next` contract.
+     - **Plan:** Finalize trait definitions, add blanket impls for collections, and update lowering to use `next` contract. [ ]
      - **Pseudocode:**
 ```pn
 for_loop_lowering :: (iterable: ExprId, body: ExprId) -> Lowered => {
@@ -264,17 +264,17 @@ for_loop_lowering :: (iterable: ExprId, body: ExprId) -> Lowered => {
 }
 ```
    - **[2.7]** Provide `From`/`Into` and `AsRef`/`AsMut` conversions for standard types.
-     - **Plan:** Define trait signatures, implement conversions for numeric widening, string slices, and reference views.
+     - **Plan:** Define trait signatures, implement conversions for numeric widening, string slices, and reference views. [ ]
      - **Pseudocode:**
 ```pn
-impl From[String] for Vec[u8] {
-	from :: (value: String) -> Vec[u8] => {
+impl From<String> for Vec<u8> {
+	from :: (value: String) -> Vec<u8> => {
 		ret Vec::from_slice(value.as_bytes())
 	}
 }
 ```
    - **[2.8]** Define `Default`, `Clone`, `Copy`, `Borrow`, `Error` traits with derive support roadmap.
-     - **Plan:** Provide default implementations for primitives, design clone semantics referencing ownership, and stub derive macro hooks.
+     - **Plan:** Provide default implementations for primitives, design clone semantics referencing ownership, and stub derive macro hooks. [ ]
      - **Pseudocode:**
 ```pn
 clone_impl :: (value: &T) -> T where T: Clone => {
@@ -290,7 +290,7 @@ default_impl :: (ty: TypeId) -> Value => {
 }
 ```
    - **[2.9]** Harden trait resolution caches/lookups with conflict diagnostics.
-     - **Plan:** Add caching with versioning snapshots, detect overlapping impls, and issue targeted diagnostics.
+     - **Plan:** Add caching with versioning snapshots, detect overlapping impls, and issue targeted diagnostics. [ ]
      - **Pseudocode:**
 ```pn
 resolve_trait :: (trait_id: TraitId, ty: TypeId) -> !ImplId => {
@@ -305,7 +305,7 @@ resolve_trait :: (trait_id: TraitId, ty: TypeId) -> !ImplId => {
 }
 ```
    - **[2.10]** Implement trait objects: vtable layout, `dyn Trait` parsing, runtime dispatch.
-     - **Plan:** Introduce trait object type representation, construct vtables during codegen, and update runtime dispatch call sites.
+     - **Plan:** Introduce trait object type representation, construct vtables during codegen, and update runtime dispatch call sites. [ ]
      - **Pseudocode:**
 ```pn
 make_trait_object :: (data_ptr: Ptr, vtable: &VTable) -> TraitObject => {
@@ -320,7 +320,7 @@ dispatch_trait :: (obj: TraitObject, slot: usize, args: Args) -> Value => {
 
 3. **Establish error handling and diagnostics** (`plans/runtime-errors-and-panics/plan.md`)
    - **[3.1]** Provide error propagation on `!T`/`E!T` result types with `?`-like flow and helper combinators.
-     - **Plan:** Implement syntactic sugar lowering for `!` values and ensure control flow analysis handles early returns.
+     - **Plan:** Implement syntactic sugar lowering for `!` values and ensure control flow analysis handles early returns. [ ]
      - **Pseudocode:**
 ```pn
 lower_try_operator :: (expr: ExprId) -> Lowered => {
@@ -331,7 +331,7 @@ lower_try_operator :: (expr: ExprId) -> Lowered => {
 }
 ```
    - **[3.2]** Add error/option convenience helpers (`unwrap_or`, `map_err`) in stdlib.
-     - **Plan:** Implement in `stdlib/prelude.pn`, ensure zero-cost inline semantics, and add doc tests.
+     - **Plan:** Implement in `stdlib/prelude.pn`, ensure zero-cost inline semantics, and add doc tests. [ ]
      - **Pseudocode:**
 ```pn
 unwrap_or :: (value: !T, fallback: T) -> T => {
@@ -342,10 +342,10 @@ unwrap_or :: (value: !T, fallback: T) -> T => {
 }
 ```
    - **[3.3]** Implement `Error` trait with `source()` traversal and downcasting helper.
-     - **Plan:** Define trait methods, integrate with dynamic type metadata, and support nested errors.
+     - **Plan:** Define trait methods, integrate with dynamic type metadata, and support nested errors. [ ]
      - **Pseudocode:**
 ```pn
-error_chain :: (err: &dyn Error) -> Iterator[&dyn Error] => {
+error_chain :: (err: &dyn Error) -> Iterator<&dyn Error> => {
 	current := some(err)
 	ret Iterator::new(|yield| {
 		while let some(e) = current {
@@ -356,7 +356,7 @@ error_chain :: (err: &dyn Error) -> Iterator[&dyn Error] => {
 }
 ```
    - **[3.4]** Capture file/line metadata during panic and integrate with compiler diagnostics.
-     - **Plan:** Use macros to capture location, embed into panic payload, and align with diagnostic renderer.
+     - **Plan:** Use macros to capture location, embed into panic payload, and align with diagnostic renderer. [ ]
      - **Pseudocode:**
 ```pn
 panic_with_location :: (message: string, location: SourceLocation) -> none => {
@@ -365,7 +365,7 @@ panic_with_location :: (message: string, location: SourceLocation) -> none => {
 }
 ```
    - **[3.5]** Expose panic hook registration API and default logging behavior.
-     - **Plan:** Implement atomic pointer to hook, provide setter/getter, call hook before default action.
+     - **Plan:** Implement atomic pointer to hook, provide setter/getter, call hook before default action. [ ]
      - **Pseudocode:**
 ```pn
 set_panic_hook :: (hook: PanicHook) -> PanicHook => {
@@ -374,7 +374,7 @@ set_panic_hook :: (hook: PanicHook) -> PanicHook => {
 }
 ```
    - **[3.6]** Implement backtrace collection (gated) and store in panic payloads.
-     - **Plan:** On supported platforms, collect frame pointers via unwinder, serialize to string representation, store in payload.
+     - **Plan:** On supported platforms, collect frame pointers via unwinder, serialize to string representation, store in payload. [ ]
      - **Pseudocode:**
 ```pn
 capture_backtrace :: () -> Backtrace => {
@@ -384,7 +384,7 @@ capture_backtrace :: () -> Backtrace => {
 }
 ```
    - **[3.7]** Add configuration to choose abort vs unwind per build profile, with runtime plumbing.
-     - **Plan:** Extend build config parser, set global strategy, branch in panic handler accordingly.
+     - **Plan:** Extend build config parser, set global strategy, branch in panic handler accordingly. [ ]
      - **Pseudocode:**
 ```pn
 perform_panic_strategy :: (strategy: PanicStrategy) -> none => {
@@ -397,10 +397,10 @@ perform_panic_strategy :: (strategy: PanicStrategy) -> none => {
 
 4. **Build foundational collections and utilities** (`plans/core-utilities/plan.md`, `plans/luxuries/plan.md`)
    - **[4.1]** Implement `Vec<T>` allocation growth, `push`, `pop`, `len`, `iter`, and `IntoIterator`.
-     - **Plan:** Use doubling capacity strategy, ensure safe reallocations, provide iterator structs, and integrate into prelude.
+     - **Plan:** Use doubling capacity strategy, ensure safe reallocations, provide iterator structs, and integrate into prelude. [ ]
      - **Pseudocode:**
 ```pn
-vec_push :: (vec: &mut Vec[T], item: T) -> none => {
+vec_push :: (vec: &mut Vec<T>, item: T) -> none => {
 	if vec.len == vec.cap {
 		vec.grow()
 	}
@@ -408,7 +408,7 @@ vec_push :: (vec: &mut Vec[T], item: T) -> none => {
 	vec.len += 1
 }
 
-vec_pop :: (vec: &mut Vec[T]) -> ?T => {
+vec_pop :: (vec: &mut Vec<T>) -> ?T => {
 	if vec.len == 0 {
 		ret none
 	}
@@ -416,13 +416,13 @@ vec_pop :: (vec: &mut Vec[T]) -> ?T => {
 	ret some(move(vec.data[vec.len]))
 }
 
-vec_len :: (&Vec[T]) -> usize => vec.len
+vec_len :: (&Vec<T>) -> usize => vec.len
 
-vec_into_iter :: (vec: Vec[T]) -> VecIntoIter[T] => {
+vec_into_iter :: (vec: Vec<T>) -> VecIntoIter<T> => {
 	ret VecIntoIter { data: vec.data, len: vec.len, index: 0 }
 }
 
-impl Iterator[T] for VecIntoIter[T] {
+impl Iterator<T> for VecIntoIter<T> {
 	next :: (&mut self) -> ?T => {
 		if self.index == self.len {
 			ret none
@@ -434,22 +434,22 @@ impl Iterator[T] for VecIntoIter[T] {
 }
 ```
    - **[4.2]** Provide `Vec<T>` slicing, reserve, shrink, and capacity APIs.
-     - **Plan:** Add `ensure_capacity`, `shrink_to_fit`, and slicing constructors interacting with `Slice<T>` type.
+     - **Plan:** Add `ensure_capacity`, `shrink_to_fit`, and slicing constructors interacting with `Slice<T>` type. [ ]
      - **Pseudocode:**
 ```pn
-vec_reserve :: (vec: &mut Vec[T], additional: usize) -> none => {
+vec_reserve :: (vec: &mut Vec<T>, additional: usize) -> none => {
 	needed := vec.len + additional
 	if needed > vec.cap {
 		vec.reallocate(next_capacity(needed))
 	}
 }
 
-vec_slice :: (&Vec[T], range: Range<usize>) -> Slice[T] => {
+vec_slice :: (&Vec<T>, range: Range<usize>) -> Slice<T> => {
 	assert(range.end <= vec.len)
 	ret Slice { ptr: vec.data.as_ptr() + range.start, len: range.end - range.start }
 }
 
-vec_shrink_to_fit :: (vec: &mut Vec[T]) -> none => {
+vec_shrink_to_fit :: (vec: &mut Vec<T>) -> none => {
 	if vec.len == vec.cap {
 		ret none
 	}
@@ -459,12 +459,12 @@ vec_shrink_to_fit :: (vec: &mut Vec[T]) -> none => {
 ```
 ```
    - **[4.3]** Create hash map/set scaffolding leveraging `Hash` trait and open-addressing pseudocode.
-     - **Plan:** Implement probe sequence, lazy deletion, resizing strategy, and integrate `Hash` trait stateful hashing.
+     - **Plan:** Implement probe sequence, lazy deletion, resizing strategy, and integrate `Hash` trait stateful hashing. [ ]
      - **Pseudocode:**
 ```pn
-hashmap_insert :: (map: &mut HashMap[K, V], key: K, value: V) -> none => {
+hashmap_insert :: (map: &mut HashMap<K, V>, key: K, value: V) -> none => {
 	idx := map.find_slot(&key)
-	map.slots[idx] = Slot::occupied(key, value)
+	map.slots<idx> = Slot::occupied(key, value)
 	map.len += 1
 	if map.load_factor() > 0.7 {
 		map.resize(map.cap * 2)
@@ -472,7 +472,7 @@ hashmap_insert :: (map: &mut HashMap[K, V], key: K, value: V) -> none => {
 }
 ```
    - **[4.4]** Extend string utilities: builders, rope concatenation/indexing, substring search.
-     - **Plan:** Implement `StringBuilder` with chunked buffers, integrate rope tree balancing, and add Boyer-Moore substring search.
+     - **Plan:** Implement `StringBuilder` with chunked buffers, integrate rope tree balancing, and add Boyer-Moore substring search. [ ]
      - **Pseudocode:**
 ```pn
 rope_concat :: (left: RopeNode, right: RopeNode) -> RopeNode => {
@@ -484,17 +484,17 @@ bm_search :: (haystack: string, needle: string) -> ?usize => {
 	i := 0
 	while i <= haystack.len - needle.len {
 		j := needle.len - 1
-		while j >= 0 && needle[j] == haystack[i + j] {
+		while j >= 0 && needle<j> == haystack<i + j> {
 			j -= 1
 		}
 		if j < 0 { ret some(i) }
-		i += max(1, j - table[haystack[i + j]])
+		i += max(1, j - table<haystack<i + j>>)
 	}
 	ret none
 }
 ```
    - **[4.5]** Add Unicode-aware string diagnostics aligned with `plans/core-utilities/plan.md`.
-     - **Plan:** Integrate normalization checks, detect invalid grapheme clusters, and emit detailed diagnostics via `Diagnostic::add_note`.
+     - **Plan:** Integrate normalization checks, detect invalid grapheme clusters, and emit detailed diagnostics via `Diagnostic::add_note`. [ ]
      - **Pseudocode:**
 ```pn
 validate_utf8 :: (input: string, span: Span) -> !none => {
@@ -507,7 +507,7 @@ validate_utf8 :: (input: string, span: Span) -> !none => {
 }
 ```
    - **[4.6]** Implement logging macros and async sink worker from `plans/luxuries/plan.md`.
-     - **Plan:** Provide macros expanding to log queue pushes, spawn background worker tied to executor, and allow sink configuration.
+     - **Plan:** Provide macros expanding to log queue pushes, spawn background worker tied to executor, and allow sink configuration. [ ]
      - **Pseudocode:**
 ```pn
 log :: (level: LogLevel, message: string) -> none => {
@@ -526,7 +526,7 @@ log_worker :: (queue: &LogQueue, sink: &mut LogSink) -> none => {
 }
 ```
    - **[4.7]** Provide in-language testing harness with assertion/reporting integration.
-     - **Plan:** Build test runner that discovers annotated functions, captures results, and prints colored summaries.
+     - **Plan:** Build test runner that discovers annotated functions, captures results, and prints colored summaries. [ ]
      - **Pseudocode:**
 ```pn
 run_tests :: (registry: &TestRegistry) -> TestSummary => {
@@ -544,7 +544,7 @@ run_tests :: (registry: &TestRegistry) -> TestSummary => {
 }
 ```
    - **[4.8]** Flesh out PRNG helpers (deterministic + secure placeholders) for tooling tests.
-     - **Plan:** Provide deterministic algorithms like XorShift and stub secure RNG hooking to platform entropy.
+     - **Plan:** Provide deterministic algorithms like XorShift and stub secure RNG hooking to platform entropy. [ ]
      - **Pseudocode:**
 ```pn
 xor_shift32 :: (state: &mut u32) -> u32 => {
@@ -559,7 +559,7 @@ xor_shift32 :: (state: &mut u32) -> u32 => {
 
 5. **Rework module system and internal compiler architecture** (`plans/near-term-priorities/plan.md`, `plans/tier-1-first-class-domains/plan.md`, `plans/advanced-language-features/plan.md`)
    - **[5.1]** Redesign module resolver to maintain namespace tree and detect cycles.
-     - **Plan:** Build namespace table, maintain stack for DFS, record resolved modules, and produce diagnostics on cycles.
+     - **Plan:** Build namespace table, maintain stack for DFS, record resolved modules, and produce diagnostics on cycles. [ ]
      - **Pseudocode:**
 ```pn
 resolve_modules :: (root: ModuleId) -> none => {
@@ -568,7 +568,7 @@ resolve_modules :: (root: ModuleId) -> none => {
 	visit(root, &mut visited, &mut stack)
 }
 
-visit :: (module: ModuleId, visited: &mut Set[ModuleId], stack: &mut Vec[ModuleId]) -> none => {
+visit :: (module: ModuleId, visited: &mut Set<ModuleId>, stack: &mut Vec<ModuleId>) -> none => {
 	if stack.contains(module) {
 		report_cycle(module, stack)
 		return
@@ -585,7 +585,7 @@ visit :: (module: ModuleId, visited: &mut Set[ModuleId], stack: &mut Vec[ModuleI
 }
 ```
    - **[5.2]** Implement import de-duplication and conflict diagnostics.
-     - **Plan:** Track imported symbols in per-module map, detect duplicates, and provide fix-it suggestions.
+     - **Plan:** Track imported symbols in per-module map, detect duplicates, and provide fix-it suggestions. [ ]
      - **Pseudocode:**
 ```pn
 record_import :: (module: ModuleId, name: Symbol, span: Span) -> !none => {
@@ -599,21 +599,22 @@ record_import :: (module: ModuleId, name: Symbol, span: Span) -> !none => {
 }
 ```
    - **[5.3]** Introduce stable handle table for AST/IR nodes (inspired by ECS plan).
-     - **Plan:** Allocate handles with generation counters, store nodes in arena, and provide typed references.
+     - **Plan:** Allocate handles with generation counters, store nodes in arena, and provide typed references. [ ]
      - **Pseudocode:**
 ```pn
-allocate_handle :: (arena: &mut Arena<T>) -> Handle<T> => {
+	allocate_handle :: (arena: &mut Arena<T>) -> Handle<T> => {
+```
 	index := arena.storage.len
 	arena.storage.push(None)
-	gen := arena.generations[index]
+	gen := arena.generations<index>
 	ret Handle { index, generation: gen }
 }
 ```
    - **[5.4]** Provide query iteration utilities over IR collections for passes.
-     - **Plan:** Design query API returning iterators, allow filtering by predicate, and ensure borrow-safe access.
+     - **Plan:** Design query API returning iterators, allow filtering by predicate, and ensure borrow-safe access. [ ]
      - **Pseudocode:**
 ```pn
-query_ir :: (ctx: &IrCtx, filter: QueryFilter) -> Iterator[NodeId] => {
+query_ir :: (ctx: &IrCtx, filter: QueryFilter) -> Iterator<NodeId> => {
 	ret Iterator::new(|yield| {
 		for node in ctx.nodes {
 			if filter.matches(node) {
@@ -624,7 +625,7 @@ query_ir :: (ctx: &IrCtx, filter: QueryFilter) -> Iterator[NodeId] => {
 }
 ```
    - **[5.5]** Implement borrow checker core inference algorithm and diagnostic emitter.
-     - **Plan:** Build MIR borrow graph, apply dataflow analysis, and emit conflict diagnostics with suggestions.
+     - **Plan:** Build MIR borrow graph, apply dataflow analysis, and emit conflict diagnostics with suggestions. [ ]
      - **Pseudocode:**
 ```pn
 analyze_borrows :: (mir: Mir) -> !none => {
@@ -641,7 +642,7 @@ analyze_borrows :: (mir: Mir) -> !none => {
 }
 ```
    - **[5.6]** Deliver procedural macro host interface and expansion pipeline.
-     - **Plan:** Provide IPC boundary for host compiler, manage caching, validate hygiene contexts, and integrate with incremental builds.
+     - **Plan:** Provide IPC boundary for host compiler, manage caching, validate hygiene contexts, and integrate with incremental builds. [ ]
      - **Pseudocode:**
 ```pn
 expand_macro :: (invocation: MacroInvocation) -> !Ast => {
@@ -653,7 +654,7 @@ expand_macro :: (invocation: MacroInvocation) -> !Ast => {
 }
 ```
    - **[5.7]** Implement const-eval interpreter for compile-time expressions (const functions, literals).
-     - **Plan:** Build interpreter with sandboxed environment, support integer/float operations, branch handling, and recursion limits.
+     - **Plan:** Build interpreter with sandboxed environment, support integer/float operations, branch handling, and recursion limits. [ ]
      - **Pseudocode:**
 ```pn
 const_eval :: (expr: ExprId, env: &mut ConstEnv) -> !Value => {
@@ -669,7 +670,7 @@ const_eval :: (expr: ExprId, env: &mut ConstEnv) -> !Value => {
 }
 ```
    - **[5.8]** Integrate pure-function memoization hooks using const-eval framework.
-     - **Plan:** Detect pure functions via annotations, hash arguments, check memo cache, and reuse results.
+     - **Plan:** Detect pure functions via annotations, hash arguments, check memo cache, and reuse results. [ ]
      - **Pseudocode:**
 ```pn
 memoize_pure_call :: (fn_id: FnId, args: [Value]) -> Value => {
@@ -685,10 +686,10 @@ memoize_pure_call :: (fn_id: FnId, args: [Value]) -> Value => {
 
 6. **Deliver IO and platform abstractions** (`plans/io-platform-and-networking/plan.md`, `plans/os-and-platform/plan.md`)
    - **[6.1]** Build `File` abstraction with buffered read/write/seek and metadata access.
-     - **Plan:** Encapsulate file descriptor, provide buffered reader/writer, implement error conversions, and ensure RAII closing.
+     - **Plan:** Encapsulate file descriptor, provide buffered reader/writer, implement error conversions, and ensure RAII closing. [ ]
      - **Pseudocode:**
 ```pn
-file_read :: (file: &mut File, buf: &mut [u8]) -> !usize => {
+file_read :: (file: &mut File, buf: &mut Vec<u8>) -> !usize => {
 	if file.buffer.is_empty() {
 		file.buffer.fill_from_os(file.fd)?
 	}
@@ -696,7 +697,7 @@ file_read :: (file: &mut File, buf: &mut [u8]) -> !usize => {
 }
 ```
    - **[6.2]** Implement `Path` type with conversion between OS strings and Peano strings.
-     - **Plan:** Store normalized segments, support UTF-8/OS string conversions, handle relative/absolute variants.
+     - **Plan:** Store normalized segments, support UTF-8/OS string conversions, handle relative/absolute variants. [ ]
      - **Pseudocode:**
 ```pn
 path_from_os :: (os_str: OsString) -> !Path => {
@@ -705,17 +706,17 @@ path_from_os :: (os_str: OsString) -> !Path => {
 }
 ```
    - **[6.3]** Add stdin/stdout/stderr handles with error propagation.
-     - **Plan:** Provide global lazy handles, support locking, and integrate with logging.
+     - **Plan:** Provide global lazy handles, support locking, and integrate with logging. [ ]
      - **Pseudocode:**
 ```pn
-stdout_write :: (bytes: &[u8]) -> !none => {
+stdout_write :: (bytes: Slice<u8>) -> !none => {
 	lock := STDOUT.lock()
 	os_write(lock.fd, bytes)?
 	ret none
 }
 ```
    - **[6.4]** Provide process control APIs: spawn, wait, kill, exit codes, env vars, args.
-     - **Plan:** Wrap platform spawn functions, manage pipes, return `ProcessHandle` with wait/kill operations.
+     - **Plan:** Wrap platform spawn functions, manage pipes, return `ProcessHandle` with wait/kill operations. [ ]
      - **Pseudocode:**
 ```pn
 spawn_process :: (spec: CommandSpec) -> !ProcessHandle => {
@@ -725,7 +726,7 @@ spawn_process :: (spec: CommandSpec) -> !ProcessHandle => {
 }
 ```
    - **[6.5]** Implement capability detection registry (mmap, signals, threads) using `detect_capabilities()` pseudocode.
-     - **Plan:** Probe OS features at startup, cache results, expose query API for conditional code paths.
+     - **Plan:** Probe OS features at startup, cache results, expose query API for conditional code paths. [ ]
      - **Pseudocode:**
 ```pn
 capabilities_init :: () -> CapabilityMap => {
@@ -737,7 +738,7 @@ capabilities_init :: () -> CapabilityMap => {
 }
 ```
    - **[6.6]** Wrap memory-mapped file lifecycle (`mmap_file`, `munmap`).
-     - **Plan:** Provide safe wrapper struct with Drop implementation releasing resources.
+     - **Plan:** Provide safe wrapper struct with Drop implementation releasing resources. [ ]
      - **Pseudocode:**
 ```pn
 open_mmap :: (path: &Path, len: usize, mode: MmapMode) -> !MmapHandle => {
@@ -747,7 +748,7 @@ open_mmap :: (path: &Path, len: usize, mode: MmapMode) -> !MmapHandle => {
 }
 ```
    - **[6.7]** Expose signal registration helpers with safe callbacks.
-     - **Plan:** Provide API to register signals with closure capturing limited data, queue to async executor if necessary.
+     - **Plan:** Provide API to register signals with closure capturing limited data, queue to async executor if necessary. [ ]
      - **Pseudocode:**
 ```pn
 register_signal :: (sig: Signal, handler: SignalHandler) -> !none => {
@@ -756,7 +757,7 @@ register_signal :: (sig: Signal, handler: SignalHandler) -> !none => {
 }
 ```
    - **[6.8]** Supply monotonic timer, sleep API, interval scheduling utilities.
-     - **Plan:** Create wrapper around `clock_gettime`, implement sleep with parking, add interval timer storing callbacks.
+     - **Plan:** Create wrapper around `clock_gettime`, implement sleep with parking, add interval timer storing callbacks. [ ]
      - **Pseudocode:**
 ```pn
 sleep :: (duration: Duration) -> none => {
@@ -767,7 +768,7 @@ sleep :: (duration: Duration) -> none => {
 }
 ```
    - **[6.9]** Implement TCP/UDP socket wrappers with blocking + async integration stubs.
-     - **Plan:** Wrap socket creation, provide read/write, integrate with executor via readiness notifications, and support non-blocking mode.
+     - **Plan:** Wrap socket creation, provide read/write, integrate with executor via readiness notifications, and support non-blocking mode. [ ]
      - **Pseudocode:**
 ```pn
 tcp_connect :: (addr: SocketAddr) -> !TcpStream => {
@@ -779,7 +780,7 @@ tcp_connect :: (addr: SocketAddr) -> !TcpStream => {
 
 7. **Enable concurrency primitives** (`plans/concurrency-and-parallelism/plan.md`)
    - **[7.1]** Expose `spawn_thread`, join handles, and thread-local storage.
-     - **Plan:** Wrap OS thread APIs, manage TLS map, propagate panics across join.
+     - **Plan:** Wrap OS thread APIs, manage TLS map, propagate panics across join. [ ]
      - **Pseudocode:**
 ```pn
 spawn_thread :: (entry: fn(Arg) -> (), arg: Arg) -> ThreadHandle => {
@@ -790,16 +791,16 @@ spawn_thread :: (entry: fn(Arg) -> (), arg: Arg) -> ThreadHandle => {
 }
 ```
    - **[7.2]** Implement `Mutex`, `RwLock`, `Condvar`, reference-counted `Rc`/`Arc` semantics.
-     - **Plan:** Build lock structs using atomics, integrate with parking lot, and ensure `Arc` uses atomic ref counts.
+     - **Plan:** Build lock structs using atomics, integrate with parking lot, and ensure `Arc` uses atomic ref counts. [ ]
      - **Pseudocode:**
 ```pn
-arc_clone :: (arc: &Arc[T]) -> Arc[T] => {
+arc_clone :: (arc: &Arc<T>) -> Arc<T> => {
 	arc.count.fetch_add(1, Ordering::Relaxed)
 	ret Arc { ptr: arc.ptr, count: arc.count }
 }
 ```
    - **[7.3]** Finalize atomic integer/boolean APIs with memory ordering enum.
-     - **Plan:** Provide wrappers over platform atomics, support orderings (Relaxed, Acquire, Release, SeqCst).
+     - **Plan:** Provide wrappers over platform atomics, support orderings (Relaxed, Acquire, Release, SeqCst). [ ]
      - **Pseudocode:**
 ```pn
 atomic_compare_exchange :: (atom: &AtomicUsize, current: usize, new: usize, order: Ordering) -> bool => {
@@ -807,13 +808,13 @@ atomic_compare_exchange :: (atom: &AtomicUsize, current: usize, new: usize, orde
 }
 ```
    - **[7.4]** Implement bounded MPMC channel per slot-state pseudocode.
-     - **Plan:** Use ring buffer with atomic indices, implement blocking semantics via condition variables or async integration.
+     - **Plan:** Use ring buffer with atomic indices, implement blocking semantics via condition variables or async integration. [ ]
      - **Pseudocode:**
 ```pn
-channel_push :: (chan: &BoundedChannel[T], item: T) -> none => {
+channel_push :: (chan: &BoundedChannel<T>, item: T) -> none => {
 	loop {
 		tail := chan.tail.load(Ordering::Acquire)
-		slot := &chan.buffer[tail % chan.cap]
+		slot := &chan.buffer<tail % chan.cap>
 		if slot.state.compare_exchange(Empty, Writing) {
 			slot.value.write(item)
 			slot.state.store(Full, Ordering::Release)
@@ -826,7 +827,7 @@ channel_push :: (chan: &BoundedChannel[T], item: T) -> none => {
 }
 ```
    - **[7.5]** Deliver async executor loop with task queue integration.
-     - **Plan:** Implement task queue, poll tasks until completion, reschedule pending tasks, integrate timers.
+     - **Plan:** Implement task queue, poll tasks until completion, reschedule pending tasks, integrate timers. [ ]
      - **Pseudocode:**
 ```pn
 executor_run :: (queue: &mut TaskQueue) -> none => {
@@ -844,7 +845,7 @@ executor_run :: (queue: &mut TaskQueue) -> none => {
 }
 ```
    - **[7.6]** Add futures/async task waker primitives aligning with executor design.
-     - **Plan:** Define `Waker` struct referencing queue, implement wake/wake_by_ref, and integrate with runtime registration.
+     - **Plan:** Define `Waker` struct referencing queue, implement wake/wake_by_ref, and integrate with runtime registration. [ ]
      - **Pseudocode:**
 ```pn
 create_waker :: (queue: TaskQueuePtr, task_id: TaskId) -> Waker => {
@@ -857,10 +858,10 @@ create_waker :: (queue: TaskQueuePtr, task_id: TaskId) -> Waker => {
 
 8. **Integrate serialization and CLI tooling** (`plans/serialization-and-parsing/plan.md`, `plans/meta-project-wide/plan.md`)
    - **[8.1]** Implement CLI parser handling flags, options, subcommands, and validation.
-     - **Plan:** Build token iterator, support flag variations, validate required arguments, and emit helpful errors.
+     - **Plan:** Build token iterator, support flag variations, validate required arguments, and emit helpful errors. [ ]
      - **Pseudocode:**
 ```pn
-parse_cli :: (tokens: [string], spec: CliSpec) -> !ParsedArgs => {
+parse_cli :: (tokens: Vec<string>, spec: CliSpec) -> !ParsedArgs => {
 	args := ParsedArgs::new()
 	iter := tokens.iter()
 	while iter.has_next() {
@@ -877,7 +878,7 @@ parse_cli :: (tokens: [string], spec: CliSpec) -> !ParsedArgs => {
 }
 ```
    - **[8.2]** Provide JSON encoder/decoder targeting compiler configuration and metadata files.
-     - **Plan:** Implement streaming encoder/decoder, handle numbers, strings, arrays, objects, and integrate with `!` errors.
+     - **Plan:** Implement streaming encoder/decoder, handle numbers, strings, arrays, objects, and integrate with `!` errors. [ ]
      - **Pseudocode:**
 ```pn
 encode_json :: (value: JsonValue, writer: &mut Writer) -> !none => {
@@ -893,7 +894,7 @@ encode_json :: (value: JsonValue, writer: &mut Writer) -> !none => {
 }
 ```
    - **[8.3]** Add binary serialization for incremental compilation caches.
-     - **Plan:** Design schema, implement endian-aware readers/writers, support versioning, and ensure checksum validation.
+     - **Plan:** Design schema, implement endian-aware readers/writers, support versioning, and ensure checksum validation. [ ]
      - **Pseudocode:**
 ```pn
 write_cache_record :: (writer: &mut BinaryWriter, record: CacheRecord) -> !none => {
@@ -905,7 +906,7 @@ write_cache_record :: (writer: &mut BinaryWriter, record: CacheRecord) -> !none 
 }
 ```
    - **[8.4]** Integrate CLI and serialization error paths with `Error` trait.
-     - **Plan:** Implement conversions to `Error`, provide context stacking, and ensure CLI errors produce exit codes.
+     - **Plan:** Implement conversions to `Error`, provide context stacking, and ensure CLI errors produce exit codes. [ ]
      - **Pseudocode:**
 ```pn
 cli_error :: (msg: string, code: i32) -> CliError => {
@@ -917,7 +918,7 @@ impl Error for CliError {
 }
 ```
    - **[8.5]** Feed logging/metrics events into governance dashboard per meta plan.
-     - **Plan:** Emit JSON payloads for key events, push to metrics sink, and surface in dashboard aggregator.
+     - **Plan:** Emit JSON payloads for key events, push to metrics sink, and surface in dashboard aggregator. [ ]
      - **Pseudocode:**
 ```pn
 record_metric :: (event: MetricsEvent) -> none => {
@@ -928,7 +929,7 @@ record_metric :: (event: MetricsEvent) -> none => {
 
 9. **Advance higher-level language features** (`plans/advanced-language-features/plan.md`, `plans/luxuries/plan.md`, `plans/security-and-cryptography/plan.md`)
    - **[9.1]** Implement function-like procedural macros and hygiene model.
-     - **Plan:** Design token normalization, assign hygiene IDs, call host process, and parse output into AST.
+     - **Plan:** Design token normalization, assign hygiene IDs, call host process, and parse output into AST. [ ]
      - **Pseudocode:**
 ```pn
 apply_hygiene :: (tokens: TokenStream, scope: HygieneScope) -> TokenStream => {
@@ -936,7 +937,7 @@ apply_hygiene :: (tokens: TokenStream, scope: HygieneScope) -> TokenStream => {
 }
 ```
    - **[9.2]** Extend macros to attribute/derive forms with incremental compilation support.
-     - **Plan:** Register attribute hooks, transform AST nodes, ensure re-run triggers on file changes, and cache derived impls.
+     - **Plan:** Register attribute hooks, transform AST nodes, ensure re-run triggers on file changes, and cache derived impls. [ ]
      - **Pseudocode:**
 ```pn
 run_attribute_macro :: (attr: Attribute, item: AstNode) -> !AstNode => {
@@ -946,10 +947,10 @@ run_attribute_macro :: (attr: Attribute, item: AstNode) -> !AstNode => {
 }
 ```
    - **[9.3]** Introduce lazy evaluation primitives and adjust borrow checker accordingly.
-     - **Plan:** Implement thunk type, enforce thread-safe initialization, and integrate with drop semantics.
+     - **Plan:** Implement thunk type, enforce thread-safe initialization, and integrate with drop semantics. [ ]
      - **Pseudocode:**
 ```pn
-force_thunk :: (thunk: &Thunk[T]) -> T => {
+force_thunk :: (thunk: &Thunk<T>) -> T => {
 	if let Evaluated(value) = thunk.state.load(Ordering::Acquire) {
 		ret value.clone()
 	}
@@ -965,7 +966,7 @@ force_thunk :: (thunk: &Thunk[T]) -> T => {
 }
 ```
    - **[9.4]** Detect pure functions and add memoization cache per optimizer needs.
-     - **Plan:** Static analyze AST for side effects, annotate pure functions, integrate with const-eval caches.
+     - **Plan:** Static analyze AST for side effects, annotate pure functions, integrate with const-eval caches. [ ]
      - **Pseudocode:**
 ```pn
 is_pure_fn :: (fn_id: FnId) -> bool => {
@@ -975,7 +976,7 @@ is_pure_fn :: (fn_id: FnId) -> bool => {
 }
 ```
    - **[9.5]** Deliver BigInt arithmetic (addition, multiplication, conversion) for literal parsing.
-     - **Plan:** Implement limb-based representation, support addition/multiplication, and integrate with literal parser.
+     - **Plan:** Implement limb-based representation, support addition/multiplication, and integrate with literal parser. [ ]
      - **Pseudocode:**
 ```pn
 bigint_mul :: (a: BigInt, b: BigInt) -> BigInt => {
@@ -983,17 +984,17 @@ bigint_mul :: (a: BigInt, b: BigInt) -> BigInt => {
 	for i in 0:a.len {
 		carry := 0
 		for j in 0:b.len {
-			prod := a[i] * b[j] + result[i + j] + carry
-			result[i + j] = prod % BASE
+			prod := a[i] * b[j] + result<i + j> + carry
+			result<i + j> = prod % BASE
 			carry = prod / BASE
 		}
-		result[i + b.len] += carry
+		result<i + b.len> += carry
 	}
 	ret result.trim()
 }
 ```
    - **[9.6]** Implement regex engine per NFA pseudocode and integrate with lexer diagnostics.
-     - **Plan:** Build parser from regex AST to NFA, implement simulation with epsilon closures, and embed into lexer for diagnostics.
+     - **Plan:** Build parser from regex AST to NFA, implement simulation with epsilon closures, and embed into lexer for diagnostics. [ ]
      - **Pseudocode:**
 ```pn
 regex_match :: (nfa: Nfa, input: string) -> bool => {
@@ -1009,10 +1010,10 @@ regex_match :: (nfa: Nfa, input: string) -> bool => {
 }
 ```
    - **[9.7]** Provide QUIC/WebRTC scaffolding as future runtime extensions.
-     - **Plan:** Define API surfaces, integrate with async runtime, stub handshake logic, and implement basic packet processing.
+     - **Plan:** Define API surfaces, integrate with async runtime, stub handshake logic, and implement basic packet processing. [ ]
      - **Pseudocode:**
 ```pn
-quic_send_packet :: (conn: &mut QuicConnection, payload: &[u8]) -> !none => {
+quic_send_packet :: (conn: &mut QuicConnection, payload: Slice<u8>) -> !none => {
 	packet := build_quic_packet(conn.next_packet_number(), payload)
 	encrypt_in_place(&mut packet, conn.keys)?
 	udp_send(conn.socket, packet)?
@@ -1020,10 +1021,10 @@ quic_send_packet :: (conn: &mut QuicConnection, payload: &[u8]) -> !none => {
 }
 ```
    - **[9.8]** Add AES/HMAC, secure randomness, and key management helpers for package signing.
-     - **Plan:** Integrate AES/HMAC implementations, expose key store, and support deterministic signing workflows.
+     - **Plan:** Integrate AES/HMAC implementations, expose key store, and support deterministic signing workflows. [ ]
      - **Pseudocode:**
 ```pn
-sign_payload :: (payload: &[u8], key: &SigningKey) -> Signature => {
+sign_payload :: (payload: Slice<u8>, key: &SigningKey) -> Signature => {
 	hash := hmac_sha256(key.mac_key, payload)
 	ret Signature::new(aes_encrypt(key.enc_key, hash))
 }
@@ -1031,7 +1032,7 @@ sign_payload :: (payload: &[u8], key: &SigningKey) -> Signature => {
 
 10. **Maintain governance and visibility** (`plans/meta-project-wide/plan.md`, `plans/current-scope-snapshot/plan.md`, `plans/near-term-priorities/plan.md`)
     - **[10.1]** Publish project charter detailing portability, performance, safety goals.
-      - **Plan:** Draft charter document, review with stakeholders, store in `docs/charter.md`, and link from README.
+      - **Plan:** Draft charter document, review with stakeholders, store in `docs/charter.md`, and link from README. [ ]
       - **Pseudocode:**
 ```pn
 publish_charter :: (doc: Document) -> none => {
@@ -1040,7 +1041,7 @@ publish_charter :: (doc: Document) -> none => {
 }
 ```
     - **[10.2]** Update scope snapshot and dashboards after each milestone completion.
-      - **Plan:** Integrate CI step updating `plans/current-scope-snapshot/plan.md`, refresh dashboard data, and notify team.
+      - **Plan:** Integrate CI step updating `plans/current-scope-snapshot/plan.md`, refresh dashboard data, and notify team. [ ]
       - **Pseudocode:**
 ```pn
 update_dashboard :: (milestone: MilestoneId, status: Status) -> none => {
@@ -1050,7 +1051,7 @@ update_dashboard :: (milestone: MilestoneId, status: Status) -> none => {
 }
 ```
     - **[10.3]** Schedule quarterly roadmap reviews using `plans/near-term-priorities/plan.md` and adjust sequencing.
-      - **Plan:** Create calendar events, gather metrics, prepare agenda referencing plan progress, and capture action items.
+      - **Plan:** Create calendar events, gather metrics, prepare agenda referencing plan progress, and capture action items. [ ]
       - **Pseudocode:**
 ```pn
 schedule_review :: (quarter: Quarter) -> Meeting => {
@@ -1060,7 +1061,7 @@ schedule_review :: (quarter: Quarter) -> Meeting => {
 }
 ```
     - **[10.4]** Track dependency completion state and reflect in `requirements.md` references.
-      - **Plan:** Build dependency matrix generator, update `requirements.md` with status badges, and run weekly.
+      - **Plan:** Build dependency matrix generator, update `requirements.md` with status badges, and run weekly. [ ]
       - **Pseudocode:**
 ```pn
 sync_requirements :: () -> none => {

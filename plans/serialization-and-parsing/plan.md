@@ -29,7 +29,7 @@
 
 ### JSON Encoding (Object)
 ```pn
-encode_json_object :: (map: Map[string, JsonValue]) -> string => {
+encode_json_object :: (map: Map<string, JsonValue>) -> string => {
 	buffer := "{"
 	first := true
 	for (key, value) in map {

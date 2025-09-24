@@ -57,11 +57,11 @@ resolve_trait_method :: (receiver_type: TypeId, trait: TraitId, method_name: str
 
 ### Iterator `next` Contract
 ```pn
-trait Iterator[T] {
+trait Iterator<T> {
 	next :: (&mut self) -> ?T
 }
 
-for_loop :: (iterator: &mut dyn Iterator[T], body: (T) -> none) -> none => {
+for_loop :: (iterator: &mut dyn Iterator<T>, body: (T) -> none) -> none => {
 	loop {
 		next_val := iterator.next()
 		match next_val {

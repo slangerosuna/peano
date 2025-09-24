@@ -81,7 +81,7 @@ destroy_entity :: (world: &mut World, handle: EntityHandle) -> none => {
 
 ### ECS Columnar Query Iteration
 ```pn
-query :: (world: &World, component_set: ComponentMask) -> Iterator[QueryRow] => {
+query :: (world: &World, component_set: ComponentMask) -> Iterator<QueryRow> => {
 	matching := world.archetypes.filter((arch) => arch.contains_all(component_set))
 	ret Iterator::new((yield_fn) => {
 		for archetype in matching {
@@ -124,15 +124,15 @@ handle_connection :: (conn: &mut TcpStream) -> none => {
 
 ### Matrix Multiplication (Naïve)
 ```pn
-mat_mul :: (A: Matrix[m, k], B: Matrix[k, n]) -> Matrix[m, n] => {
+mat_mul :: (A: Matrix<m, k>, B: Matrix<k, n>) -> Matrix<m, n> => {
 	C := zero_matrix(m, n)
 	for i in 0:m {
 		for j in 0:n {
 			sum := 0
 			for t in 0:k {
-				sum = sum + A[i][t] * B[t][j]
+				sum = sum + A<i>[t] * B<t>[j]
 			}
-			C[i][j] = sum
+			C<i>[j] = sum
 		}
 	}
 	ret C

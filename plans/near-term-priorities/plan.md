@@ -45,7 +45,7 @@ println :: (value: Display) -> none => {
 
 ### For-loop Desugaring to `IntoIterator`
 ```pn
-lower_for_loop :: (iter_expr: IntoIterator[T], body: (T) -> none) -> none => {
+lower_for_loop :: (iter_expr: IntoIterator<T>, body: (T) -> none) -> none => {
 	iterator := into_iterator(iter_expr)
 	loop {
 		next_val := iterator.next()
@@ -73,8 +73,8 @@ call_trait_object :: (obj: TraitObject, method_index: i64, args: Args) -> Value 
 ### Module Resolver Graph Walk with Namespaces
 ```pn
 resolve_modules :: (root: ModuleId) -> none => {
-	visited := Set[ModuleId]()
-	stack := Set[ModuleId]()
+	visited := Set<ModuleId>()
+	stack := Set<ModuleId>()
 	namespace_map := NamespaceTable::new()
 
 	visit :: (module: ModuleId) -> none => {

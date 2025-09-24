@@ -104,10 +104,10 @@ steal_loop :: (worker: &Worker) -> none => {
 ```pn
 Slot :: struct {
 	state: AtomicSlotState,
-	value: Cell[T],
+	value: Cell<T>,
 }
 
-push :: (channel: &BoundedChannel[T], item: T) -> none => {
+push :: (channel: &BoundedChannel<T>, item: T) -> none => {
 	loop {
 		tail := channel.tail.load()
 		slot := &channel.buffer[tail % channel.capacity]
@@ -125,7 +125,7 @@ push :: (channel: &BoundedChannel[T], item: T) -> none => {
 	}
 }
 
-pop :: (channel: &BoundedChannel[T]) -> T => {
+pop :: (channel: &BoundedChannel<T>) -> T => {
 	loop {
 		head := channel.head.load()
 		slot := &channel.buffer[head % channel.capacity]
@@ -147,7 +147,7 @@ pop :: (channel: &BoundedChannel[T]) -> T => {
 
 ### Cancellation Token Propagation
 ```pn
-cancel_after :: (future: Future[T], deadline: Instant, token: CancellationToken) -> Future[!(T | Cancelled)] => {
+cancel_after :: (future: Future<T>, deadline: Instant, token: CancellationToken) -> Future<!(T | Cancelled)> => {
 	ret Future::new(move || {
 		loop {
 			if token.is_cancelled() || monotonic_now() >= deadline {

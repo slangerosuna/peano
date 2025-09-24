@@ -78,7 +78,7 @@ serve_tcp :: (listener: &TcpListener, handler: (TcpStream) -> none) -> none => {
 
 ### Async DNS Resolution (stub)
 ```pn
-resolve_host :: (host: string, cache: &mut DnsCache) -> Future[!IpAddr] => {
+resolve_host :: (host: string, cache: &mut DnsCache) -> Future<!IpAddr> => {
 	ret Future::new(move || {
 		if let some(entry) = cache.lookup(host) {
 			ret entry

@@ -39,7 +39,7 @@
 
 ### Generic Monomorphization
 ```pn
-instantiate_generic :: (definition: GenericDef, type_args: [TypeId]) -> LlvmIr => {
+instantiate_generic :: (definition: GenericDef, type_args: Array<TypeId>) -> LlvmIr => {
 	signature := canonical_signature(definition.id, type_args)
 	if let some(hit) = cache.get(signature) {
 		ret hit
@@ -57,8 +57,8 @@ instantiate_generic :: (definition: GenericDef, type_args: [TypeId]) -> LlvmIr =
 
 ### Slice Bounds Check
 ```pn
-slice_get :: (slice: Slice[T], index: i64) -> T => {
-	if index < 0 || index >= slice.len {
+slice_get :: (slice: Slice<T>, index: i64) -> T => {
+	if index < 0 or index >= slice.len {
 		panic("slice index out of bounds")
 	}
 	ret *(slice.ptr + index)

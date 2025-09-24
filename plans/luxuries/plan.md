@@ -76,7 +76,7 @@ bigint_add :: (a: BigInt, b: BigInt) -> BigInt => {
 regex_match :: (nfa: Nfa, input: string) -> bool => {
 	current := epsilon_closure({ nfa.start })
 	for ch in input {
-		next_states := Set[NfaState]()
+		next_states := Set<NfaState>()
 		for state in current {
 			next_states.union_in_place(epsilon_closure(move(state, ch)))
 		}
