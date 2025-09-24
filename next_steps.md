@@ -709,7 +709,7 @@ path_from_os :: (os_str: OsString) -> !Path => {
      - **Plan:** Provide global lazy handles, support locking, and integrate with logging. [ ]
      - **Pseudocode:**
 ```pn
-stdout_write :: (bytes: Slice<u8>) -> !none => {
+stdout_write :: (bytes: &[u8]) -> !none => {
 	lock := STDOUT.lock()
 	os_write(lock.fd, bytes)?
 	ret none

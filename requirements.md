@@ -304,11 +304,11 @@ Notes: Today equality/ordering exist for numeric expressions. Display via printl
 2. Turn placeholder printing paths (filter, matrix identifiers) into robust implementations that use Iterator and IntoIterator traits (including changing for-loops to use these). [ ]
 3. Implement generics that works like the following [ ]:
 ```pn
-my_generic_struct<T> :: {
+my_generic_struct :: <T> {
     field: T,
 }
 
-my_generic_function<T: Iterator<Item: i64>> :: (iter: T) -> i64 {
+my_generic_function :: <T: Iterator<Item: i64>> (iter: T) -> i64 {
     acc := 0
     for i in iter {
         acc += i
