@@ -1,4 +1,4 @@
-# Peano Compiler (bplang_pest)
+# Peano Compiler
 
 Peano is an experimental, statically typed programming language and compiler implemented in Rust. The project currently focuses on establishing a practical end-to-end toolchain: parsing a Rust and Haskell-inspired surface syntax, performing semantic analysis, and emitting LLVM IR that can be linked into native executables. The repository includes an embryonic standard library and an extensive roadmap that tracks the march toward a self-hosting compiler.
 
